@@ -1,7 +1,7 @@
 #ifndef INPUT_H
 #define INPUT_H
 
-#include <stddef.h>   // for size_t
+#include <stddef.h>    // for size_t
 #include <sys/types.h> // for ssize_t
 
 /*
@@ -16,7 +16,7 @@ typedef struct {
 } InputBuffer;
 
 InputBuffer* new_input_buffer();
-void read_input(InputBuffer* input_buffer);
-void close_input_buffer(InputBuffer* input_buffer);
+void         read_input(InputBuffer* input_buffer);
+void         close_input_buffer(InputBuffer* input_buffer);
 
 #endif // INPUT_H

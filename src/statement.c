@@ -6,7 +6,7 @@
 MetaCommandResult execute_meta_command(InputBuffer* input_buffer, Table* table) {
     if (strcmp(input_buffer->buffer, ".exit") == 0) {
         close_input_buffer(input_buffer);
-        free_table(table);
+        db_close(table);
         exit(EXIT_SUCCESS);
     } else {
         return META_COMMAND_UNRECOGNIZED_COMMAND;
@@ -17,8 +17,8 @@ static PrepareResult prepare_insert(InputBuffer* input_buffer, Statement* statem
     statement->type = STATEMENT_INSERT;
     strtok(input_buffer->buffer, " "); // skip "insert"
     char* id_string = strtok(NULL, " ");
-    char* username = strtok(NULL, " ");
-    char* email = strtok(NULL, " ");
+    char* username  = strtok(NULL, " ");
+    char* email     = strtok(NULL, " ");
 
     if (id_string == NULL || username == NULL || email == NULL) {
         return PREPARE_SYNTAX_ERROR;
@@ -62,7 +62,7 @@ static ExecuteResult execute_insert(Statement* statement, Table* table) {
 
 static ExecuteResult execute_select(Statement* statement, Table* table) {
     Row row;
-        (void)statement; // mark as intentionally unused
+    (void) statement; // mark as intentionally unused
     for (uint32_t i = 0; i < table->num_rows; i++) {
         deserialize_row(row_slot(table, i), &row);
         print_row(&row);

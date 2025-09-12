@@ -12,10 +12,15 @@ static void display_banner() {
     printf("CQlite.....\nThis is just a database built to learn....\n");
 }
 
-int main(void) {
+int main(int argc, char* argv[]) {
     display_banner();
     InputBuffer* input_buffer = new_input_buffer();
-    Table* table = new_table();
+    if (argc < 2) {
+        printf("Must supply a database filename.\n");
+        exit(EXIT_FAILURE);
+    }
+    char*  filename = argv[1];
+    Table* table    = db_open(filename);
 
     while (true) {
         print_prompt();
