@@ -1,16 +1,16 @@
 CC = gcc
-SRC = $(wildcard *.c)
+CFLAGS = -Wall -Wextra -Werror -std=c11 -Isrc/include
+SRC = $(wildcard src/*.c)
 OUT = cqlite
 
 default: $(OUT)
-	./$(OUT)
 
 $(OUT): $(SRC)
-	$(CC) $(SRC) -o $(OUT)
+	$(CC) $(CFLAGS) $(SRC) -o $(OUT)
 
-# Run clang-format on all source files
+# Run clang-format on all C source & header files
 format:
-	clang-format -i $(SRC)
+	clang-format -i src/*.c src/include/*.h
 
 # Clean build artifacts
 clean:
