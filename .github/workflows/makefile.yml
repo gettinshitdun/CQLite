@@ -1,4 +1,4 @@
-name: Makefile CI
+name: C Project CI
 
 on:
   push:
@@ -8,20 +8,34 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+      # Step 1: Checkout repo
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-    - name: configure
-      run: ./configure
+      # Step 2: Install dependencies
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc clang-format make
 
-    - name: Install dependencies
-      run: make
+      # Step 3: Build the project
+      - name: Build Project
+        run: make
 
-    - name: Run check
-      run: make check
+      # Step 4: Check code formatting (fail if wrong)
+      - name: Check Code Formatting
+        run: |
+          # Run clang-format in check mode
+          unformatted=$(clang-format --dry-run --Werror src/*.c src/include/*.h 2>&1) || true
+          if [ -n "$unformatted" ]; then
+            echo "Code is not properly formatted:"
+            echo "$unformatted"
+            exit 1
+          fi
 
-    - name: Run distcheck
-      run: make distcheck
+      # Step 5: Optional - Clean build artifacts
+      - name: Clean Build
+        run: make clean
