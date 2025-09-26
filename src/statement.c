@@ -12,8 +12,7 @@ MetaCommandResult execute_meta_command(InputBuffer* input_buffer, Table* table) 
         printf("Tree:\n");
         print_leaf_node(get_page(table->pager, 0));
         return META_COMMAND_SUCCESS;
-    }
-    else if (strcmp(input_buffer->buffer, ".constants") == 0) {
+    } else if (strcmp(input_buffer->buffer, ".constants") == 0) {
         printf("Constants:\n");
         print_constants();
         return META_COMMAND_SUCCESS;
