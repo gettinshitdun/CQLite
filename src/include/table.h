@@ -22,7 +22,7 @@ typedef struct {
 } Pager;
 
 typedef struct {
-    Pager* pager;
+    Pager*   pager;
     uint32_t root_page_num;
 } Table;
 
@@ -34,7 +34,7 @@ typedef struct {
 } Cursor;
 
 Cursor* table_start(Table* table);
-Cursor* table_end(Table* table);
+Cursor* table_find(Table* table, uint32_t key);
 
 Table* db_open(const char* filename);
 Pager* pager_open(const char* filename);
@@ -56,13 +56,20 @@ void pager_flush(Pager* pager, uint32_t page_num);
 typedef enum { NODE_INTERNAL, NODE_LEAF } NodeType;
 
 uint32_t* leaf_node_num_cells(void* node);
-void* leaf_node_cell(void* node, uint32_t cell_num);
+void*     leaf_node_cell(void* node, uint32_t cell_num);
 uint32_t* leaf_node_key(void* node, uint32_t cell_num);
+Cursor*   leaf_node_find(Table* table, uint32_t page_num, uint32_t key);
 
 void* leaf_node_value(void* node, uint32_t cell_num);
-void initialize_leaf_node(void* node);
-void leaf_node_insert(Cursor* cursor, uint32_t key, Row* value);
+void  initialize_leaf_node(void* node);
+void  leaf_node_insert(Cursor* cursor, uint32_t key, Row* value);
 
 void print_constants();
 void print_leaf_node(void* node);
+
+void     set_node_type(void* node, NodeType type);
+NodeType get_node_type(void* node);
+
+extern const uint32_t NODE_TYPE_OFFSET;
+
 #endif // TABLE_H

@@ -16,7 +16,7 @@ typedef enum {
 
 typedef enum { STATEMENT_INSERT, STATEMENT_SELECT } StatementType;
 
-typedef enum { EXECUTE_TABLE_FULL, EXECUTE_SUCCESS } ExecuteResult;
+typedef enum { EXECUTE_TABLE_FULL, EXECUTE_DUPLICATE_KEY, EXECUTE_SUCCESS } ExecuteResult;
 
 typedef struct {
     StatementType type;
