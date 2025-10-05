@@ -382,7 +382,7 @@ uint32_t* internal_node_num_keys(void* node) {
 }
 
 uint32_t* internal_node_right_child(void* node) {
-    return node + INTERNAL_NODE_HEADER_SIZE;
+    return node + INTERNAL_NODE_RIGHT_CHILD_OFFSET;
 }
 
 uint32_t* internal_node_cell(void* node, uint32_t cell_num) {
@@ -465,13 +465,12 @@ void create_new_root(Table* table, uint32_t right_child_page_num) {
     *internal_node_right_child(root) = right_child_page_num;
 }
 
-void leaf_node_split_and_insert(Cursor* cursor, uint32_t key, Row* value) {
+void leaf_node_split_and_insert(Cursor* cursor, Row* value) {
     /*
         Create a new node and move half the cells there.
         insert new value in any one of node.
         Update parent or create a new one.
     */
-    printf("key = %d\n", key);
     void* old_node = get_page(cursor->table->pager, cursor->page_num);
 
     uint32_t new_page_num = get_unused_page_num(cursor->table->pager);
@@ -525,7 +524,7 @@ void leaf_node_insert(Cursor* cursor, uint32_t key, Row* value) {
     uint32_t num_cells = *leaf_node_num_cells(node);
     if (num_cells >= LEAF_NODE_MAX_CELLS) {
         // Node full
-        leaf_node_split_and_insert(cursor, key, value);
+        leaf_node_split_and_insert(cursor, value);
         return;
     }
 
