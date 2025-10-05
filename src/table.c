@@ -167,18 +167,6 @@ Cursor* table_start(Table* table) {
     return cursor;
 }
 
-Cursor* table_find(Table* table, uint32_t key) {
-    uint32_t root_page_num = table->root_page_num;
-
-    void* root_node = get_page(table->pager, root_page_num);
-    if (get_node_type(root_node) == NODE_LEAF) {
-        return leaf_node_find(table, root_page_num, key);
-    } else {
-        printf("Need to implement searching an internal node\n");
-        exit(EXIT_FAILURE);
-    }
-}
-
 Cursor* leaf_node_find(Table* table, uint32_t page_num, uint32_t key) {
     void*    node      = get_page(table->pager, page_num);
     uint32_t num_cells = *leaf_node_num_cells(node);
@@ -330,8 +318,8 @@ uint32_t get_unused_page_num(Pager* pager) {
     It starts with the common header,
     then the number of keys it contains,
     then the page number of its rightmost child.
-    Internal nodes always have one more child pointer than they have keys. That extra child pointer
-   is stored in the header.
+    Internal nodes always have one more child pointer than they have keys. That extra child
+   pointer is stored in the header.
 
     ┌────────────────────────────────────────────────────────────┐
     │                      INTERNAL NODE                         │
@@ -355,10 +343,10 @@ uint32_t get_unused_page_num(Pager* pager) {
     │ right_child_pointer (in header, not repeated here)         │
     └────────────────────────────────────────────────────────────┘
 
-    since each cell size is 8bytes only. Because each child pointer / key pair is so small, we can
-   fit 510 keys and 511 child pointers in each internal node. That means we’ll never have to
-   traverse many layers of the tree to find a given key! Example with just 3 internal node layers,
-   leaf nodes = 511^3 = 133,432,831 ~550 GB
+    since each cell size is 8bytes only. Because each child pointer / key pair is so small, we
+    can fit 510 keys and 511 child pointers in each internal node. That means we’ll never have to
+    traverse many layers of the tree to find a given key! Example with just 3 internal node
+    layers, leaf nodes = 511^3 = 133,432,831 ~550 GB
 
 */
 
@@ -434,8 +422,8 @@ void initialize_internal_node(void* node) {
     Move lower half of N into L and the upper half into R. Now N is empty.
     Add 〈L, K,R〉 in N, where K is the max key in L.
     Page N remains the root.
-    Note that the depth of the tree has increased by one, but the new tree remains height balanced
-   without violating any B+-tree property.
+    Note that the depth of the tree has increased by one, but the new tree remains height
+    balanced without violating any B+-tree property.
 */
 void create_new_root(Table* table, uint32_t right_child_page_num) {
     /*
@@ -446,7 +434,7 @@ void create_new_root(Table* table, uint32_t right_child_page_num) {
         New root node points to two children.
     */
 
-    void*    root                = get_page(table->pager, table->root_page_num);
+    void* root = get_page(table->pager, table->root_page_num);
     // void*    right_child         = get_page(table->pager, right_child_page_num);
     uint32_t left_child_page_num = get_unused_page_num(table->pager);
     void*    left_child          = get_page(table->pager, left_child_page_num);
@@ -484,20 +472,20 @@ void leaf_node_split_and_insert(Cursor* cursor, Row* value) {
         Starting from the right, move each key to correct position.
     */
 
-    for (int32_t i = (int32_t)LEAF_NODE_MAX_CELLS; i >= 0; i--) {
+    for (int32_t i = (int32_t) LEAF_NODE_MAX_CELLS; i >= 0; i--) {
         void* destination_node;
 
-        if (i >= (int32_t)LEAF_NODE_LEFT_SPLIT_COUNT) {
+        if (i >= (int32_t) LEAF_NODE_LEFT_SPLIT_COUNT) {
             destination_node = new_node;
         } else {
             destination_node = old_node;
         }
-        uint32_t index_within_node = i % (int32_t)LEAF_NODE_LEFT_SPLIT_COUNT;
+        uint32_t index_within_node = i % (int32_t) LEAF_NODE_LEFT_SPLIT_COUNT;
         void*    destination       = leaf_node_cell(destination_node, index_within_node);
 
-        if (i == (int32_t)cursor->cell_num) {
+        if (i == (int32_t) cursor->cell_num) {
             serialize_row(value, destination);
-        } else if (i > (int32_t)cursor->cell_num) {
+        } else if (i > (int32_t) cursor->cell_num) {
             memcpy(destination, leaf_node_cell(old_node, i - 1), LEAF_NODE_CELL_SIZE);
         } else {
             memcpy(destination, leaf_node_cell(old_node, i), LEAF_NODE_CELL_SIZE);
@@ -598,5 +586,45 @@ void print_tree(Pager* pager, uint32_t page_num, uint32_t indentation_level) {
             child = *internal_node_right_child(node);
             print_tree(pager, child, indentation_level + 1);
             break;
+    }
+}
+
+Cursor* internal_node_find(Table* table, uint32_t page_num, uint32_t key) {
+    void*    node     = get_page(table->pager, page_num);
+    uint32_t num_keys = *internal_node_num_keys(node);
+
+    /* Binary search to find index of child to search */
+    uint32_t min_index = 0;
+    uint32_t max_index = num_keys; /* there is one more child than key */
+
+    while (min_index != max_index) {
+        uint32_t index        = (min_index + max_index) / 2;
+        uint32_t key_to_right = *internal_node_key(node, index);
+        if (key_to_right >= key) {
+            max_index = index;
+        } else {
+            min_index = index + 1;
+        }
+    }
+    uint32_t child_num = *internal_node_child(node, min_index);
+    void*    child     = get_page(table->pager, child_num);
+
+    switch (get_node_type(child)) {
+        case NODE_LEAF:
+            return leaf_node_find(table, child_num, key);
+        case NODE_INTERNAL:
+            return internal_node_find(table, child_num, key);
+    }
+    return NULL;
+}
+
+Cursor* table_find(Table* table, uint32_t key) {
+    uint32_t root_page_num = table->root_page_num;
+
+    void* root_node = get_page(table->pager, root_page_num);
+    if (get_node_type(root_node) == NODE_LEAF) {
+        return leaf_node_find(table, root_page_num, key);
+    } else {
+        return internal_node_find(table, root_page_num, key);
     }
 }
