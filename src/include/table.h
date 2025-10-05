@@ -65,7 +65,7 @@ void  initialize_leaf_node(void* node);
 void  leaf_node_insert(Cursor* cursor, uint32_t key, Row* value);
 
 void print_constants();
-void print_leaf_node(void* node);
+void print_tree(Pager* pager, uint32_t page_num, uint32_t indentation_level);
 
 void     set_node_type(void* node, NodeType type);
 NodeType get_node_type(void* node);
