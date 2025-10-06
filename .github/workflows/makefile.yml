@@ -40,7 +40,7 @@ jobs:
       - name: Run Python Tests
         run: |
           echo "🐍 Running Python tests..."
-          python3 tests/test_database.py
+          python3 test_database.py
         env:
           PYTHONUNBUFFERED: 1  # ensures all output is shown live
 
