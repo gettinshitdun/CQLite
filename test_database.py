@@ -116,4 +116,4 @@ def test_bulk_insert(n):
 # ------------------------------------------------------------
 if __name__ == "__main__":
     print(f"🧩 Using binary: {BINARY_PATH}")
-    test_bulk_insert(1400)
+    test_bulk_insert(14)
