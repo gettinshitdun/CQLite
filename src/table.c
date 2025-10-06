@@ -448,6 +448,11 @@ void create_new_root(Table* table, uint32_t right_child_page_num) {
 }
 
 uint32_t internal_node_find_child(void* node, uint32_t key) {
+    /*
+    Return the index of the child which should contain
+    the given key.
+    */
+
     uint32_t num_keys = *internal_node_num_keys(node);
 
     /* Binary search */
@@ -455,7 +460,7 @@ uint32_t internal_node_find_child(void* node, uint32_t key) {
     uint32_t max_index = num_keys; /* there is one more child than key */
 
     while (min_index != max_index) {
-        uint32_t index        = (min_index + max_index) / 2;
+        uint32_t index = (min_index + max_index) / 2;
         uint32_t key_to_right = *internal_node_key(node, index);
         if (key_to_right >= key) {
             max_index = index;
@@ -463,14 +468,16 @@ uint32_t internal_node_find_child(void* node, uint32_t key) {
             min_index = index + 1;
         }
     }
+
     return min_index;
 }
 
 Cursor* internal_node_find(Table* table, uint32_t page_num, uint32_t key) {
-    void*    node        = get_page(table->pager, page_num);
+    void* node = get_page(table->pager, page_num);
+
     uint32_t child_index = internal_node_find_child(node, key);
-    uint32_t child_num   = *internal_node_child(node, child_index);
-    void*    child       = get_page(table->pager, child_num);
+    uint32_t child_num = *internal_node_child(node, child_index);
+    void* child = get_page(table->pager, child_num);
     switch (get_node_type(child)) {
         case NODE_LEAF:
             return leaf_node_find(table, child_num, key);
@@ -481,7 +488,7 @@ Cursor* internal_node_find(Table* table, uint32_t page_num, uint32_t key) {
 }
 
 void update_internal_node_key(void* node, uint32_t old_key, uint32_t new_key) {
-    uint32_t old_child_index                  = internal_node_find_child(node, old_key);
+    uint32_t old_child_index = internal_node_find_child(node, old_key);
     *internal_node_key(node, old_child_index) = new_key;
 }
 
@@ -517,14 +524,14 @@ void internal_node_insert(Table* table, uint32_t parent_page_num, uint32_t child
     }
 }
 
-void leaf_node_split_and_insert(Cursor* cursor, Row* value) {
+void leaf_node_split_and_insert(Cursor* cursor, uint32_t key,Row* value) {
     /*
         Create a new node and move half the cells there.
         insert new value in any one of node.
         Update parent or create a new one.
     */
     void*    old_node     = get_page(cursor->table->pager, cursor->page_num);
-    uint32_t old_max      = get_node_max_key(old_node);
+    uint32_t old_max = get_node_max_key(old_node);
     uint32_t new_page_num = get_unused_page_num(cursor->table->pager);
 
     void* new_node = get_page(cursor->table->pager, new_page_num);
@@ -552,6 +559,7 @@ void leaf_node_split_and_insert(Cursor* cursor, Row* value) {
 
         if (i == (int32_t) cursor->cell_num) {
             serialize_row(value, leaf_node_value(destination_node, index_within_node));
+            *leaf_node_key(destination_node, index_within_node) = key;
         } else if (i > (int32_t) cursor->cell_num) {
             memcpy(destination, leaf_node_cell(old_node, i - 1), LEAF_NODE_CELL_SIZE);
         } else {
@@ -583,7 +591,7 @@ void leaf_node_insert(Cursor* cursor, uint32_t key, Row* value) {
     uint32_t num_cells = *leaf_node_num_cells(node);
     if (num_cells >= LEAF_NODE_MAX_CELLS) {
         // Node full
-        leaf_node_split_and_insert(cursor, value);
+        leaf_node_split_and_insert(cursor, key, value);
         return;
     }
 
