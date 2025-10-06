@@ -15,27 +15,35 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Step 2: Install dependencies
+      # Step 2: Install system dependencies
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc clang-format make
+          sudo apt-get install -y gcc clang-format make python3 python3-pip
 
-      # Step 3: Build the project
+      # Step 3: Build the C project
       - name: Build Project
         run: make
 
-      # Step 4: Check code formatting (fail if wrong)
+      # Step 4: Check code formatting (clang-format)
       - name: Check Code Formatting
         run: |
-          # Run clang-format in check mode
-          unformatted=$(clang-format --dry-run --Werror src/*.c src/include/*.h 2>&1) || true
-          if [ -n "$unformatted" ]; then
-            echo "Code is not properly formatted:"
-            echo "$unformatted"
+          echo "🧹 Checking code style..."
+          # Fail if any file would be reformatted
+          if ! clang-format --dry-run --Werror src/*.c src/include/*.h; then
+            echo "❌ Code is not properly formatted. Run clang-format locally."
             exit 1
           fi
+          echo "✅ Formatting OK."
 
-      # Step 5: Optional - Clean build artifacts
+      # Step 5: Run Python tests
+      - name: Run Python Tests
+        run: |
+          echo "🐍 Running Python tests..."
+          python3 test_database.py
+        env:
+          PYTHONUNBUFFERED: 1  # ensures all output is shown live
+
+      # Step 6: Clean build artifacts
       - name: Clean Build
         run: make clean
