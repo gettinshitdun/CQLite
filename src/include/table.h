@@ -33,7 +33,6 @@ typedef struct {
     bool     end_of_table;
 } Cursor;
 
-
 typedef struct {
     uint32_t leaf_nodes;
     uint32_t internal_nodes;
@@ -83,6 +82,5 @@ extern const uint32_t NODE_TYPE_OFFSET;
 void internal_node_split_and_insert(Table* table, uint32_t parent_page_num,
                                     uint32_t child_page_num);
 
-
-void print_btree_stats(Pager* pager, uint32_t root_page_num) ;
+void print_btree_stats(Pager* pager, uint32_t root_page_num);
 #endif // TABLE_H
