@@ -94,7 +94,7 @@ def test_bulk_insert(n):
         commands.append(f"insert {i} {username} {email}")
 
     # Add select + exit for verification
-    commands += ["select", ".exit"]
+    commands += ["select", ".printstats",".exit"]
 
     try:
         result = run_script(commands, args=["test.db"])
@@ -102,7 +102,7 @@ def test_bulk_insert(n):
         print(f"✅ Successfully inserted {n} rows into test.db")
         # Optional: print last few output lines for inspection
         print("\n📄 Last output lines:")
-        for line in result[-8:]:
+        for line in result[-20:]:
             print("   ", line)
 
     except RuntimeError as e:
@@ -110,10 +110,66 @@ def test_bulk_insert(n):
         print(f"Crash occurred while inserting up to ID {len(commands)-2}")
         raise
 
+def test_complex_inserts_and_btree():
+    """
+    Stress test inserting many rows in random order,
+    then verify that .btree command executes successfully.
+    """
+    cleanup_db()
+
+    script = [
+        "insert 18 user18 person18@example.com",
+        "insert 7 user7 person7@example.com",
+        "insert 10 user10 person10@example.com",
+        "insert 29 user29 person29@example.com",
+        "insert 23 user23 person23@example.com",
+        "insert 4 user4 person4@example.com",
+        "insert 14 user14 person14@example.com",
+        "insert 30 user30 person30@example.com",
+        "insert 15 user15 person15@example.com",
+        "insert 26 user26 person26@example.com",
+        "insert 22 user22 person22@example.com",
+        "insert 19 user19 person19@example.com",
+        "insert 2 user2 person2@example.com",
+        "insert 1 user1 person1@example.com",
+        "insert 21 user21 person21@example.com",
+        "insert 11 user11 person11@example.com",
+        "insert 6 user6 person6@example.com",
+        "insert 20 user20 person20@example.com",
+        "insert 5 user5 person5@example.com",
+        "insert 8 user8 person8@example.com",
+        "insert 9 user9 person9@example.com",
+        "insert 3 user3 person3@example.com",
+        "insert 12 user12 person12@example.com",
+        "insert 27 user27 person27@example.com",
+        "insert 17 user17 person17@example.com",
+        "insert 16 user16 person16@example.com",
+        "insert 13 user13 person13@example.com",
+        "insert 24 user24 person24@example.com",
+        "insert 25 user25 person25@example.com",
+        "insert 28 user28 person28@example.com",
+        ".btree",
+        ".exit",
+    ]
+
+    result = run_script(script, args=["test.db"])
+    print("\n🌳 === BTree Output ===")
+    for line in result:
+        print(line)
+    print("=======================\n")
+
+    # Basic checks
+    assert any("Tree:" in line for line in result), "❌ Expected '.btree' output missing!"
+    assert result[-1].startswith("cqlite >"), "❌ Database did not exit cleanly!"
+
+    print("🌳 Complex insert and .btree test passed!")
 
 # ------------------------------------------------------------
 # Main
 # ------------------------------------------------------------
 if __name__ == "__main__":
     print(f"🧩 Using binary: {BINARY_PATH}")
-    test_bulk_insert(14)
+    test_complex_inserts_and_btree()
+    cleanup_db()
+    test_bulk_insert(75000)
+
