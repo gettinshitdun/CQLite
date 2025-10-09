@@ -94,7 +94,7 @@ def test_bulk_insert(n):
         commands.append(f"insert {i} {username} {email}")
 
     # Add select + exit for verification
-    commands += ["select", ".exit"]
+    commands += ["select", ".printstats",".exit"]
 
     try:
         result = run_script(commands, args=["test.db"])
@@ -102,7 +102,7 @@ def test_bulk_insert(n):
         print(f"✅ Successfully inserted {n} rows into test.db")
         # Optional: print last few output lines for inspection
         print("\n📄 Last output lines:")
-        for line in result[-8:]:
+        for line in result[-20:]:
             print("   ", line)
 
     except RuntimeError as e:
@@ -170,3 +170,6 @@ def test_complex_inserts_and_btree():
 if __name__ == "__main__":
     print(f"🧩 Using binary: {BINARY_PATH}")
     test_complex_inserts_and_btree()
+    cleanup_db()
+    test_bulk_insert(75000)
+

@@ -6,7 +6,7 @@
 #include <stdbool.h>
 #define COLUMN_USERNAME_SIZE 32
 #define COLUMN_EMAIL_SIZE 255
-#define TABLE_MAX_PAGES 100
+#define TABLE_MAX_PAGES 50000000
 
 typedef struct {
     uint32_t id;
@@ -32,6 +32,14 @@ typedef struct {
     uint32_t cell_num;
     bool     end_of_table;
 } Cursor;
+
+
+typedef struct {
+    uint32_t leaf_nodes;
+    uint32_t internal_nodes;
+    uint32_t total_pages;
+    uint32_t max_depth;
+} BTreeStats;
 
 Cursor* table_start(Table* table);
 Cursor* table_find(Table* table, uint32_t key);
@@ -72,4 +80,9 @@ NodeType get_node_type(void* node);
 
 extern const uint32_t NODE_TYPE_OFFSET;
 
+void internal_node_split_and_insert(Table* table, uint32_t parent_page_num,
+                                    uint32_t child_page_num);
+
+
+void print_btree_stats(Pager* pager, uint32_t root_page_num) ;
 #endif // TABLE_H
