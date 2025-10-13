@@ -6,7 +6,7 @@
 #include <stdbool.h>
 #define COLUMN_USERNAME_SIZE 32
 #define COLUMN_EMAIL_SIZE 255
-#define TABLE_MAX_PAGES 50000000
+#define TABLE_MAX_PAGES 50000
 
 typedef struct {
     uint32_t id;
