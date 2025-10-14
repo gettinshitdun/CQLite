@@ -16,11 +16,11 @@ typedef enum {
 
 typedef enum { STATEMENT_INSERT, STATEMENT_SELECT } StatementType;
 
-typedef enum { EXECUTE_TABLE_FULL, EXECUTE_DUPLICATE_KEY, EXECUTE_SUCCESS } ExecuteResult;
+typedef enum { EXECUTE_TABLE_FULL, EXECUTE_DUPLICATE_KEY, EXECUTE_SUCCESS,EXECUTE_DUPLICATE_TABLE_OR_INDEX } ExecuteResult;
 
 typedef struct {
     StatementType type;
-    Row           row_to_insert;
+    SchemaRow     schema_row_to_insert;
 } Statement;
 
 MetaCommandResult execute_meta_command(InputBuffer* input_buffer, Table* table);

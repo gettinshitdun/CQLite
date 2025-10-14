@@ -64,6 +64,9 @@ int main(int argc, char* argv[]) {
             case EXECUTE_TABLE_FULL:
                 printf("Error: Table full.\n");
                 break;
+            case EXECUTE_DUPLICATE_TABLE_OR_INDEX:
+                printf("Error: Duplicate table or index.\n");
+                break;
         }
     }
 

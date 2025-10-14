@@ -4,15 +4,21 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#define COLUMN_USERNAME_SIZE 32
-#define COLUMN_EMAIL_SIZE 255
 #define TABLE_MAX_PAGES 50000000
 
+#define MAX_TYPE_LEN 16
+#define MAX_NAME_LEN 64
+#define MAX_TBL_NAME 64
+#define MAX_SQL_LEN 256
+
 typedef struct {
-    uint32_t id;
-    char     username[COLUMN_USERNAME_SIZE + 1];
-    char     email[COLUMN_EMAIL_SIZE + 1];
-} Row;
+    uint32_t rowid;
+    char     type[MAX_TYPE_LEN];     // "table", "index", etc.
+    char     name[MAX_NAME_LEN];     // object name
+    char     tbl_name[MAX_TBL_NAME]; // table name for index, same as name for tables
+    uint32_t root_page;              // root page of table/index B-tree
+    char     sql[MAX_SQL_LEN];       // CREATE TABLE/INDEX statement
+} SchemaRow;
 
 typedef struct {
     int      file_descriptor;
@@ -46,11 +52,11 @@ Cursor* table_find(Table* table, uint32_t key);
 Table* db_open(const char* filename);
 Pager* pager_open(const char* filename);
 void   db_close(Table* table);
-void   serialize_row(Row* source, void* destination);
-void   deserialize_row(void* source, Row* destination);
+void   serialize_schema_row(SchemaRow* source, void* destination);
+void   deserialize_schema_row(void* source, SchemaRow* destination);
 void*  cursor_value(Cursor* cursor);
 void   cursor_advance(Cursor* cursor);
-void   print_row(Row* row);
+void   print_schema_row(SchemaRow* row);
 
 extern const uint32_t TABLE_MAX_ROWS;
 extern const uint32_t LEAF_NODE_MAX_CELLS;
@@ -69,7 +75,7 @@ Cursor*   leaf_node_find(Table* table, uint32_t page_num, uint32_t key);
 
 void* leaf_node_value(void* node, uint32_t cell_num);
 void  initialize_leaf_node(void* node);
-void  leaf_node_insert(Cursor* cursor, uint32_t key, Row* value);
+void  leaf_node_insert(Cursor* cursor, uint32_t key, SchemaRow* value);
 
 void print_constants();
 void print_tree(Pager* pager, uint32_t page_num, uint32_t indentation_level);
@@ -83,4 +89,7 @@ void internal_node_split_and_insert(Table* table, uint32_t parent_page_num,
                                     uint32_t child_page_num);
 
 void print_btree_stats(Pager* pager, uint32_t root_page_num);
+
+uint32_t get_unused_page_num(Pager* pager);
+
 #endif // TABLE_H

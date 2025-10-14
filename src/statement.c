@@ -24,35 +24,40 @@ MetaCommandResult execute_meta_command(InputBuffer* input_buffer, Table* table) 
     }
 }
 
-static PrepareResult prepare_insert(InputBuffer* input_buffer, Statement* statement) {
+static PrepareResult prepare_insert_schema(InputBuffer* input_buffer, Statement* statement) {
     statement->type = STATEMENT_INSERT;
-    strtok(input_buffer->buffer, " "); // skip "insert"
-    char* id_string = strtok(NULL, " ");
-    char* username  = strtok(NULL, " ");
-    char* email     = strtok(NULL, " ");
 
-    if (id_string == NULL || username == NULL || email == NULL) {
+    strtok(input_buffer->buffer, " "); // skip "insert"
+
+    char* type_str     = strtok(NULL, " ");
+    char* name_str     = strtok(NULL, " ");
+    char* tbl_name_str = strtok(NULL, " ");
+    char* sql_str      = strtok(NULL, "\0"); // rest of line
+
+    if (!type_str || !name_str || !tbl_name_str || !sql_str) {
         return PREPARE_SYNTAX_ERROR;
     }
 
-    int id = atoi(id_string);
-    if (id < 0) {
-        return PREPARE_NEGATIVE_ID;
-    }
-    if (strlen(username) > COLUMN_USERNAME_SIZE || strlen(email) > COLUMN_EMAIL_SIZE) {
+    if (strlen(type_str) > MAX_TYPE_LEN ||
+        strlen(name_str) > MAX_NAME_LEN ||
+        strlen(tbl_name_str) > MAX_TBL_NAME ||
+        strlen(sql_str) > MAX_SQL_LEN) {
         return PREPARE_STRING_TOO_LONG;
-    }
+        }
 
-    statement->row_to_insert.id = id;
-    strcpy(statement->row_to_insert.username, username);
-    strcpy(statement->row_to_insert.email, email);
+    SchemaRow* row = &statement->schema_row_to_insert;
+    strncpy(row->type, type_str, MAX_TYPE_LEN);
+    strncpy(row->name, name_str, MAX_NAME_LEN);
+    strncpy(row->tbl_name, tbl_name_str, MAX_TBL_NAME);
+    row->root_page = 0;  // engine will allocate during execute_insert
+    strncpy(row->sql, sql_str, MAX_SQL_LEN);
 
     return PREPARE_SUCCESS;
 }
 
 PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement) {
     if (strncmp(input_buffer->buffer, "insert", 6) == 0) {
-        return prepare_insert(input_buffer, statement);
+        return prepare_insert_schema(input_buffer, statement);
     }
     if (strcmp(input_buffer->buffer, "select") == 0) {
         statement->type = STATEMENT_SELECT;
@@ -62,31 +67,51 @@ PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement)
 }
 
 static ExecuteResult execute_insert(Statement* statement, Table* table) {
-    void*    node          = get_page(table->pager, table->root_page_num);
-    uint32_t num_cells     = (*leaf_node_num_cells(node));
-    Row*     row_to_insert = &statement->row_to_insert;
-    uint32_t key_to_insert = row_to_insert->id;
-    Cursor*  cursor        = table_find(table, key_to_insert);
+    void*    node      = get_page(table->pager, table->root_page_num);
+    uint32_t num_cells = *leaf_node_num_cells(node);
 
-    if (cursor->cell_num < num_cells) {
-        uint32_t key_at_index = *leaf_node_key(node, cursor->cell_num);
-        if (key_at_index == key_to_insert) {
-            return EXECUTE_DUPLICATE_KEY;
+    SchemaRow* row_to_insert = &statement->schema_row_to_insert;
+    uint32_t   key_to_insert; // use rowid as B-tree key
+
+    Cursor* cursor;
+
+    for (uint32_t i = 0; i < num_cells; i++) {
+        SchemaRow existing_row;
+        deserialize_schema_row(leaf_node_value(node, i), &existing_row);
+
+        if (strcmp(existing_row.type, row_to_insert->type) == 0 &&
+            strcmp(existing_row.name, row_to_insert->name) == 0) {
+            return EXECUTE_DUPLICATE_TABLE_OR_INDEX; // object already exists
         }
     }
-    leaf_node_insert(cursor, row_to_insert->id, row_to_insert);
+
+    // allocate root page number
+    if (row_to_insert->root_page == 0) {
+        row_to_insert->root_page = get_unused_page_num(table->pager);
+        void* new_node = get_page(table->pager, row_to_insert->root_page);
+        initialize_leaf_node(new_node);
+    }
+
+    do {
+        row_to_insert->rowid = (uint32_t) rand();
+        key_to_insert        = row_to_insert->rowid;
+        cursor               = table_find(table, key_to_insert);
+    } while (cursor->cell_num < num_cells &&
+             *leaf_node_key(node, cursor->cell_num) == key_to_insert);
+
+    leaf_node_insert(cursor, key_to_insert, row_to_insert);
     free(cursor);
     return EXECUTE_SUCCESS;
 }
 
 static ExecuteResult execute_select(Statement* statement, Table* table) {
-    Row row;
+    SchemaRow row;
 
     Cursor* cursor = table_start(table);
     (void) statement; // mark as intentionally unused
     while (!(cursor->end_of_table)) {
-        deserialize_row(cursor_value(cursor), &row);
-        print_row(&row);
+        deserialize_schema_row(cursor_value(cursor), &row);
+        print_schema_row(&row);
         cursor_advance(cursor);
     }
 

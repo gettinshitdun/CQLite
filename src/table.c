@@ -10,32 +10,44 @@
 #define size_of_attribute(Struct, Attribute) sizeof(((Struct*) 0)->Attribute)
 #define INVALID_PAGE_NUM UINT32_MAX
 
-const uint32_t ID_SIZE       = size_of_attribute(Row, id);
-const uint32_t USERNAME_SIZE = size_of_attribute(Row, username);
-const uint32_t EMAIL_SIZE    = size_of_attribute(Row, email);
+const uint32_t ROWID_SIZE     = sizeof(((SchemaRow*) 0)->rowid);
+const uint32_t TYPE_SIZE      = sizeof(((SchemaRow*) 0)->type);
+const uint32_t NAME_SIZE      = sizeof(((SchemaRow*) 0)->name);
+const uint32_t TBL_NAME_SIZE  = sizeof(((SchemaRow*) 0)->tbl_name);
+const uint32_t ROOT_PAGE_SIZE = sizeof(((SchemaRow*) 0)->root_page);
+const uint32_t SQL_SIZE       = sizeof(((SchemaRow*) 0)->sql);
 
-const uint32_t ID_OFFSET       = 0;
-const uint32_t USERNAME_OFFSET = ID_OFFSET + ID_SIZE;
-const uint32_t EMAIL_OFFSET    = USERNAME_OFFSET + USERNAME_SIZE;
+const uint32_t ROWID_OFFSET     = 0;
+const uint32_t TYPE_OFFSET      = ROWID_OFFSET + ROWID_SIZE;
+const uint32_t NAME_OFFSET      = TYPE_OFFSET + TYPE_SIZE;
+const uint32_t TBL_NAME_OFFSET  = NAME_OFFSET + NAME_SIZE;
+const uint32_t ROOT_PAGE_OFFSET = TBL_NAME_OFFSET + TBL_NAME_SIZE;
+const uint32_t SQL_OFFSET       = ROOT_PAGE_OFFSET + ROOT_PAGE_SIZE;
 
-const uint32_t ROW_SIZE = ID_SIZE + USERNAME_SIZE + EMAIL_SIZE;
+const uint32_t ROW_SIZE =
+    ROWID_SIZE + TYPE_SIZE + NAME_SIZE + TBL_NAME_SIZE + ROOT_PAGE_SIZE + SQL_SIZE;
 
 const uint32_t PAGE_SIZE = 4096;
 
-void serialize_row(Row* source, void* destination) {
-    memcpy(destination + ID_OFFSET, &(source->id), ID_SIZE);
-    strncpy(destination + USERNAME_OFFSET, source->username, USERNAME_SIZE);
-    strncpy(destination + EMAIL_OFFSET, source->email, EMAIL_SIZE);
+void serialize_schema_row(SchemaRow* source, void* destination) {
+    strncpy(destination + TYPE_OFFSET, source->type, TYPE_SIZE);
+    strncpy(destination + NAME_OFFSET, source->name, NAME_SIZE);
+    strncpy(destination + TBL_NAME_OFFSET, source->tbl_name, TBL_NAME_SIZE);
+    memcpy(destination + ROOT_PAGE_OFFSET, &(source->root_page), ROOT_PAGE_SIZE);
+    strncpy(destination + SQL_OFFSET, source->sql, SQL_SIZE);
 }
 
-void deserialize_row(void* source, Row* destination) {
-    memcpy(&(destination->id), source + ID_OFFSET, ID_SIZE);
-    memcpy(&(destination->username), source + USERNAME_OFFSET, USERNAME_SIZE);
-    memcpy(&(destination->email), source + EMAIL_OFFSET, EMAIL_SIZE);
+void deserialize_schema_row(void* source, SchemaRow* destination) {
+    memcpy(destination->type, source + TYPE_OFFSET, TYPE_SIZE);
+    memcpy(destination->name, source + NAME_OFFSET, NAME_SIZE);
+    memcpy(destination->tbl_name, source + TBL_NAME_OFFSET, TBL_NAME_SIZE);
+    memcpy(&(destination->root_page), source + ROOT_PAGE_OFFSET, ROOT_PAGE_SIZE);
+    memcpy(destination->sql, source + SQL_OFFSET, SQL_SIZE);
 }
 
-void print_row(Row* row) {
-    printf("(%d %s %s)\n", row->id, row->username, row->email);
+void print_schema_row(SchemaRow* row) {
+    printf("(type=%s, name=%s, tbl_name=%s, root_page=%u, sql=%s)\n", row->type, row->name,
+           row->tbl_name, row->root_page, row->sql);
 }
 
 void* cursor_value(Cursor* cursor) {
@@ -658,7 +670,7 @@ void internal_node_split_and_insert(Table* table, uint32_t parent_page_num,
     }
 }
 
-void leaf_node_split_and_insert(Cursor* cursor, uint32_t key, Row* value) {
+void leaf_node_split_and_insert(Cursor* cursor, uint32_t key, SchemaRow* value) {
     /*
         Create a new node and move half the cells there.
         insert new value in any one of node.
@@ -692,7 +704,7 @@ void leaf_node_split_and_insert(Cursor* cursor, uint32_t key, Row* value) {
         void*    destination       = leaf_node_cell(destination_node, index_within_node);
 
         if (i == (int32_t) cursor->cell_num) {
-            serialize_row(value, leaf_node_value(destination_node, index_within_node));
+            serialize_schema_row(value, leaf_node_value(destination_node, index_within_node));
             *leaf_node_key(destination_node, index_within_node) = key;
         } else if (i > (int32_t) cursor->cell_num) {
             memcpy(destination, leaf_node_cell(old_node, i - 1), LEAF_NODE_CELL_SIZE);
@@ -719,7 +731,7 @@ void leaf_node_split_and_insert(Cursor* cursor, uint32_t key, Row* value) {
     }
 }
 
-void leaf_node_insert(Cursor* cursor, uint32_t key, Row* value) {
+void leaf_node_insert(Cursor* cursor, uint32_t key, SchemaRow* value) {
     void* node = get_page(cursor->table->pager, cursor->page_num);
 
     uint32_t num_cells = *leaf_node_num_cells(node);
@@ -737,7 +749,7 @@ void leaf_node_insert(Cursor* cursor, uint32_t key, Row* value) {
     }
     *(leaf_node_num_cells(node)) += 1;
     *(leaf_node_key(node, cursor->cell_num)) = key;
-    serialize_row(value, leaf_node_value(node, cursor->cell_num));
+    serialize_schema_row(value, leaf_node_value(node, cursor->cell_num));
 }
 
 Table* db_open(const char* filename) {
