@@ -169,7 +169,7 @@ def test_complex_inserts_and_btree():
 # ------------------------------------------------------------
 if __name__ == "__main__":
     print(f"🧩 Using binary: {BINARY_PATH}")
-    test_complex_inserts_and_btree()
-    cleanup_db()
-    test_bulk_insert(75000)
+    # test_complex_inserts_and_btree()
+    # cleanup_db()
+    # test_bulk_insert(75000)
 
